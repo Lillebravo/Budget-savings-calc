@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lundahl Holding AB - Dashboard V5</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js för grafer -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+    <div id="app-root">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-950 p-6 shadow-xl">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">LUNDAHL FINANCIAL DASHBOARD V5</h1>
+                <p class="text-xs text-slate-400 mt-1" id="current-date"></p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-2 rounded-lg font-medium transition cursor-pointer">💾 Exportera JSON</button>
+                <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-2 rounded-lg font-medium transition cursor-pointer">
+                    📂 Importera JSON
+                    <input type="file" accept=".json" onchange="importData(event)" class="hidden">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-8">
+
+        <!-- KPI Översikt -->
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Inkomst</h3>
+                <p class="text-3xl font-bold text-emerald-400 mt-2" id="total-income-display">0 kr</p>
+            </div>
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Aktiva Utgifter</h3>
+                <p class="text-3xl font-bold text-rose-400 mt-2" id="total-expenses-display">0 kr</p>
+            </div>
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Totalt Sparande</h3>
+                <p class="text-3xl font-bold text-indigo-400 mt-2" id="total-savings-display">0 kr</p>
+            </div>
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Oallokerat (Vardagsmarginal)</h3>
+                <p class="text-3xl font-bold text-purple-400 mt-2" id="leftover-display">0 kr</p>
+            </div>
+        </section>
+
+        <!-- Grafer -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md flex flex-col items-center">
+                <h2 class="text-lg font-bold mb-4 text-slate-200 self-start">Kassaflöde</h2>
+                <div class="w-full h-[250px] flex justify-center"><canvas id="barChart"></canvas></div>
+            </div>
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md flex flex-col items-center">
+                <h2 class="text-lg font-bold mb-2 text-slate-200 self-start">Fördelning av Sparhinkar</h2>
+                <div class="w-full h-[250px] flex justify-center"><canvas id="pieChart"></canvas></div>
+            </div>
+        </section>
+
+        <section class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
+            <h2 class="text-xl font-bold text-amber-400 border-b border-slate-800 pb-2 mb-2">Utgiftsprognos</h2>
+            <p class="text-xs text-slate-400 mb-6">Den streckade linjen visar hur utgifterna faller när tidsbestämda kostnader försvinner. Hover på den nedersta linjen visar bara permanenta utgifter.</p>
+            <div class="w-full h-[300px] flex justify-center"><canvas id="expenseForecastChart"></canvas></div>
+        </section>
+
+        <!-- MASTER REGISTER: SPARFORMER -->
+        <section class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md space-y-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-emerald-400">Dina Favoritfonder & Aktier (Master)</h2>
+                    <p class="text-xs text-slate-400">Ändringar uppdaterar automatiskt alla hinkar som äger sparformen.</p>
+                </div>
+                <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                    <input type="text" id="asset-search" oninput="updateApp()" placeholder="Sök tillgång..." class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 w-full sm:w-40">
+                    <select id="asset-filter-sector" onchange="updateApp()" class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500" id="filter-sector-dropdown">
+                        <!-- Genereras dynamiskt i JS för att hålla listan torr -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Spara form -->
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800/80">
+                    <h3 class="text-sm font-bold text-slate-300 mb-3" id="asset-form-title">Hantera Sparform</h3>
+                    <form id="asset-form" class="space-y-3">
+                        <input type="hidden" id="asset-id">
+                        <div>
+                            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Namn</label>
+                            <input type="text" id="asset-name" required placeholder="T.ex. Avanza Global" class="w-full bg-slate-950 border border-slate-800 rounded-md p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Kategori</label>
+                                <select id="asset-category" class="w-full bg-slate-950 border border-slate-800 rounded-md p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                    <option value="Fond">Fond</option>
+                                    <option value="Aktie">Aktie</option>
+                                    <option value="Sparkonto">Sparkonto</option>
+                                    <option value="ETF">ETF</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Sektor</label>
+                                <select id="asset-sector" class="w-full bg-slate-950 border border-slate-800 rounded-md p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                    <!-- Genereras dynamiskt i JS -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Avkastning %</label>
+                                <input type="number" step="0.1" id="asset-rate" required placeholder="8.0" class="w-full bg-slate-950 border border-slate-800 rounded-md p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+                        <div class="flex gap-1.5 pt-1">
+                            <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-2 rounded transition cursor-pointer">Spara</button>
+                            <button type="button" id="asset-cancel-btn" onclick="cancelAssetEdit()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2 rounded transition cursor-pointer">Avbryt</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="lg:col-span-2 overflow-y-auto max-h-[260px] pr-1">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="asset-master-grid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- KASSAFLÖDE OCH HINKAR -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- TRANSAKTIONER -->
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md space-y-6">
+                <h2 class="text-xl font-bold text-blue-400 border-b border-slate-800 pb-2" id="flow-title">Lägg till Transaktion</h2>
+                <form id="flow-form" class="space-y-4">
+                    <input type="hidden" id="flow-id">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Typ</label>
+                        <select id="flow-type" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                            <option value="income">Inkomst</option>
+                            <option value="expense">Utgift</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Namn</label>
+                        <input type="text" id="flow-name" required placeholder="T.ex. Lönekonto, Klarna" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Belopp (kr/mån)</label>
+                        <input type="number" id="flow-amount" required placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Slutdatum (Valfritt)</label>
+                        <input type="date" id="flow-enddate" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="flex space-x-2">
+                        <button type="submit" id="flow-submit-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-lg transition text-sm cursor-pointer">Spara</button>
+                        <button type="button" id="flow-cancel-btn" onclick="cancelFlowEdit()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-sm transition cursor-pointer">Avbryt</button>
+                    </div>
+                </form>
+                <ul id="flow-list" class="divide-y divide-slate-900 max-h-52 overflow-y-auto pr-1"></ul>
+            </div>
+
+            <!-- SPARHINKAR -->
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md space-y-6 lg:col-span-2">
+                <h2 class="text-xl font-bold text-purple-400 border-b border-slate-800 pb-2" id="bucket-title">Skapa Ny Sparhink</h2>
+                <form id="bucket-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input type="hidden" id="bucket-id">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Typ</label>
+                        <select id="bucket-mode" onchange="syncBucketFormMode()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                            <option value="savings">Sparande</option>
+                            <option value="repayment">Avbetalning</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Hinkens Namn</label>
+                        <input type="text" id="bucket-name" required placeholder="T.ex. Husets kontantinsats" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Startvärde</label>
+                        <input type="number" id="bucket-start-amount" step="0.01" value="0" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div id="bucket-savings-fields" class="contents">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Fokus</label>
+                            <select id="bucket-horizon" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                                <option value="long">Långsiktigt</option>
+                                <option value="short">Kortsiktigt</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Tidshorisont (År)</label>
+                            <input type="number" id="bucket-years" required value="5" min="1" max="50" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Månatligt Sparande (kr)</label>
+                            <input type="number" id="bucket-amount" required placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                    </div>
+                    <div id="bucket-repayment-fields" class="hidden md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Välj tidsbestämd utgift</label>
+                            <select id="bucket-repayment-flow" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Extra amortering / mån</label>
+                            <input type="number" id="bucket-extra-payment" value="0" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div class="md:col-span-2 text-[10px] text-slate-500 bg-slate-900/70 border border-slate-800 rounded-lg p-3">
+                            Startvärdet kan användas som nuvarande skuld om du vill räkna från ett exakt saldo istället för att uppskatta det från betalning, ränta och slutdatum.
+                        </div>
+                    </div>
+                    <div class="md:col-span-2 flex items-end">
+                        <button type="submit" id="bucket-submit-btn" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2 rounded-lg transition text-sm cursor-pointer">Spara</button>
+                        <button type="button" id="bucket-cancel-btn" onclick="cancelBucketEdit()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 ml-2 rounded-lg text-sm transition cursor-pointer">Avbryt</button>
+                    </div>
+                </form>
+
+                <div id="buckets-container" class="space-y-4 max-h-[450px] overflow-y-auto pr-1"></div>
+            </div>
+        </section>
+
+        <!-- DYNAMISK FRAMTIDSPROGNOS -->
+        <section class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
+            <h2 class="text-xl font-bold text-indigo-400 border-b border-slate-800 pb-2 mb-2">Framtidsprognos</h2>
+            <p class="text-xs text-slate-400 mb-6">Klicka på en rad för att fälla ut och analysera din viktade sektor-exponering.</p>
+            <div id="projection-tables-container" class="space-y-6"></div>
+        </section>
+    </main>
+
+    <!-- MODAL -->
+    <div id="connect-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl max-w-sm w-full space-y-4">
+            <h3 class="text-lg font-bold text-emerald-400" id="connect-modal-title">Koppla till hink</h3>
+            <input type="hidden" id="connect-asset-id">
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Välj Sparhink</label>
+                <select id="connect-bucket-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200"></select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Andel (%)</label>
+                <input type="number" id="connect-weight" value="50" min="1" max="100" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="submitConnectAsset()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-sm transition cursor-pointer">Lägg till</button>
+                <button onclick="closeConnectModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-lg text-sm transition cursor-pointer">Stäng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // MASTER SEKTOR-LISTA (Borttaget Global, tillagt heltäckande branscher)
+        const MASTER_SECTORS = ['Tech', 'Finans', 'Telekom','Industri', 'Fastigheter', 'Hälsovård', 'Energi/Råvaror', 'Konsument', 'Ränta/Sparkonto', 'Mix'];
+
+        // Initiera dropdowns för sektorer
+        const filterDropdown = document.getElementById('asset-filter-sector');
+        filterDropdown.innerHTML = '<option value="all">Alla sektorer</option>' + MASTER_SECTORS.map(s => `<option value="${s}">${s}</option>`).join('');
+        
+        const formDropdown = document.getElementById('asset-sector');
+        formDropdown.innerHTML = MASTER_SECTORS.map(s => `<option value="${s}">${s}</option>`).join('');
+
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        function normalizeState(rawState) {
+            const fallback = {
+                flow: [],
+                assets: [],
+                buckets: [],
+                expandedBuckets: {},
+                expandedProjections: {},
+                bucketAssetSearches: {}
+            };
+
+            const nextState = { ...fallback, ...(rawState || {}) };
+
+            nextState.flow = Array.isArray(nextState.flow) ? nextState.flow.map(item => ({
+                interest: 0,
+                ...item,
+                endDate: item.endDate || null,
+                interest: parseFloat(item.interest) || 0
+            })) : [];
+
+            nextState.assets = Array.isArray(nextState.assets) ? nextState.assets : [];
+
+            nextState.buckets = Array.isArray(nextState.buckets) ? nextState.buckets.map(bucket => ({
+                mode: 'savings',
+                startAmount: 0,
+                linkedFlowId: '',
+                extraPayment: 0,
+                ...bucket,
+                amount: parseFloat(bucket.amount) || 0,
+                years: parseInt(bucket.years) || 5,
+                startAmount: parseFloat(bucket.startAmount) || 0,
+                extraPayment: parseFloat(bucket.extraPayment) || 0,
+                linkedFlowId: bucket.linkedFlowId || '',
+                mode: bucket.mode || 'savings',
+                allocations: Array.isArray(bucket.allocations) ? bucket.allocations : []
+            })) : [];
+
+            nextState.expandedBuckets = nextState.expandedBuckets || {};
+            nextState.expandedProjections = nextState.expandedProjections || {};
+            nextState.bucketAssetSearches = nextState.bucketAssetSearches || {};
+            return nextState;
+        }
+
+        let state = normalizeState(JSON.parse(localStorage.getItem('lundahl_dashboard_v5_state')) || {
+            flow: [
+                { id: "1", type: 'income', name: 'Lön (Netto)', amount: 33000, endDate: null, interest: 0 },
+                { id: "2", type: 'income', name: 'Frun (Mammaledig)', amount: 4000, endDate: null, interest: 0 },
+                { id: "3", type: 'expense', name: 'Fasta utgifter (Inkl. Lån/CSN)', amount: 19000, endDate: null, interest: 0 },
+                { id: "4", type: 'expense', name: 'Klarna (Dödas i juli)', amount: 9500, endDate: '2026-07-31', interest: 0 },
+                { id: "5", type: 'expense', name: 'Harry Avbetalningar (Klara sept)', amount: 1140, endDate: '2026-09-30', interest: 0 }
+            ],
+            assets: [
+                { id: "a1", name: 'Avanza Global', category: 'Fond', rate: 8.0, sector: 'Mix' },
+                { id: "a2", name: 'Investor B', category: 'Aktie', rate: 12.0, sector: 'Investment' },
+                { id: "a3", name: 'Plus AllaBolag Sverige', category: 'Fond', rate: 9.0, sector: 'Mix' },
+                { id: "a4", name: 'Swedbank Robur Tech', category: 'Fond', rate: 15.0, sector: 'Tech' },
+                { id: "a5", name: 'Sparkonto rörlig', category: 'Sparkonto', rate: 3.5, sector: 'Ränta/Sparkonto' }
+            ],
+            buckets: [
+                { id: "b1", name: 'Pension & Frihetsmaskin', horizon: 'long', years: 39, amount: 1000, allocations: [{ assetId: 'a1', weight: 40 }, { assetId: 'a3', weight: 30 }, { assetId: 'a4', weight: 30 }] },
+                { id: "b2", name: 'Husets Kontantinsats', horizon: 'long', years: 6, amount: 3000, allocations: [{ assetId: 'a1', weight: 50 }, { assetId: 'a2', weight: 50 }] },
+                { id: "b3", name: 'Bil (Restvärde + Akut)', horizon: 'long', years: 4, amount: 2000, allocations: [{ assetId: 'a1', weight: 50 }, { assetId: 'a2', weight: 50 }] },
+                { id: "b4", name: 'Semesterhinken', horizon: 'short', years: 2, amount: 1000, allocations: [{ assetId: 'a1', weight: 70 }, { assetId: 'a3', weight: 30 }] },
+                { id: "b5", name: 'Tatueringshinken', horizon: 'short', years: 3, amount: 1000, allocations: [{ assetId: 'a1', weight: 70 }, { assetId: 'a3', weight: 30 }] },
+                { id: "b6", name: 'Skoj-hink', horizon: 'short', years: 1, amount: 1000, allocations: [{ assetId: 'a5', weight: 100 }] },
+                { id: "b7", name: 'Privat Buffert', horizon: 'short', years: 5, amount: 1800, allocations: [{ assetId: 'a5', weight: 100 }] },
+                { id: "b8", name: 'Presenter & Släkt', horizon: 'short', years: 1, amount: 400, allocations: [{ assetId: 'a5', weight: 100 }] },
+                { id: "b9", name: 'Vardags-Barnhink', horizon: 'short', years: 1, amount: 500, allocations: [{ assetId: 'a5', weight: 100 }] }
+            ],
+            expandedBuckets: {},
+            expandedProjections: {},
+            bucketAssetSearches: {}
+        });
+
+        let barChart, pieChart, expenseForecastChart;
+        let sectorCharts = {};
+
+        function saveState() {
+            localStorage.setItem('lundahl_dashboard_v5_state', JSON.stringify(state));
+            updateApp();
+        }
+
+        function getSortedBuckets() {
+            return [...state.buckets].sort((a, b) => b.years - a.years);
+        }
+
+        function getWeightedRate(bucket) {
+            let totalRate = 0;
+            bucket.allocations.forEach(alloc => {
+                const asset = state.assets.find(a => a.id === alloc.assetId);
+                if (asset) totalRate += (alloc.weight / 100) * asset.rate;
+            });
+            return parseFloat(totalRate.toFixed(2));
+        }
+
+        function calculateCompoundInterest(monthlyDeposit, annualRate, years) {
+            if (annualRate === 0) return monthlyDeposit * 12 * years;
+            const monthlyRate = (annualRate / 100) / 12;
+            return monthlyDeposit * ((Math.pow(1 + monthlyRate, years * 12) - 1) / monthlyRate);
+        }
+
+        function addMonths(baseDate, monthsToAdd) {
+            const nextDate = new Date(baseDate);
+            nextDate.setMonth(nextDate.getMonth() + monthsToAdd);
+            return nextDate;
+        }
+
+        function formatFlowEndDate(endDateStr) {
+            if (!endDateStr) return '';
+            return new Date(endDateStr).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function getMonthsUntilDate(endDateStr, fromDate = new Date()) {
+            if (!endDateStr) return 0;
+            const target = new Date(`${endDateStr}T00:00:00`);
+            const diffMs = target.getTime() - fromDate.getTime();
+            return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 30.4375)));
+        }
+
+        function getTimedExpenseFlows() {
+            return state.flow.filter(item => item.type === 'expense' && item.endDate);
+        }
+
+        function syncBucketFormMode() {
+            const mode = document.getElementById('bucket-mode').value;
+            const savingsFields = document.getElementById('bucket-savings-fields');
+            const repaymentFields = document.getElementById('bucket-repayment-fields');
+            const isRepayment = mode === 'repayment';
+            savingsFields.classList.toggle('hidden', mode === 'repayment');
+            repaymentFields.classList.toggle('hidden', mode !== 'repayment');
+            document.getElementById('bucket-horizon').required = !isRepayment;
+            document.getElementById('bucket-years').required = !isRepayment;
+            document.getElementById('bucket-amount').required = !isRepayment;
+            document.getElementById('bucket-repayment-flow').required = isRepayment;
+            refreshRepaymentFlowOptions();
+        }
+
+        function refreshRepaymentFlowOptions() {
+            const select = document.getElementById('bucket-repayment-flow');
+            if (!select) return;
+            const currentValue = select.value;
+            const options = getTimedExpenseFlows().map(flow => `<option value="${flow.id}">${flow.name} · ${flow.amount.toLocaleString('sv-SE')} kr/mån · ${flow.interest || 0}% · slutar ${formatFlowEndDate(flow.endDate)}</option>`);
+            select.innerHTML = options.length > 0 ? options.join('') : '<option value="">Inga tidsbestämda utgifter finns</option>';
+            if (currentValue) select.value = currentValue;
+        }
+
+        function getLoanPrincipalFromFlow(flow) {
+            const months = getMonthsUntilDate(flow.endDate);
+            const monthlyPayment = parseFloat(flow.amount) || 0;
+            const annualRate = parseFloat(flow.interest) || 0;
+            if (months <= 0) return monthlyPayment;
+            if (annualRate === 0) return monthlyPayment * months;
+            const monthlyRate = (annualRate / 100) / 12;
+            return monthlyPayment * (1 - Math.pow(1 + monthlyRate, -months)) / monthlyRate;
+        }
+
+        function getBucketBaseBalance(bucket) {
+            if (bucket.mode === 'repayment') {
+                if (bucket.startAmount > 0) return bucket.startAmount;
+                const flow = state.flow.find(item => item.id === bucket.linkedFlowId);
+                return flow ? getLoanPrincipalFromFlow(flow) : 0;
+            }
+            return bucket.startAmount || 0;
+        }
+
+        function getBucketMonthlyValue(bucket) {
+            return bucket.mode === 'repayment' ? (parseFloat(bucket.extraPayment) || 0) : (parseFloat(bucket.amount) || 0);
+        }
+
+        function getBucketContributionValue(bucket) {
+            if (bucket.mode === 'repayment') {
+                return getBucketBaseBalance(bucket) + getBucketMonthlyValue(bucket) * Math.max(1, Math.ceil(getRepaymentPayoffMonths(bucket) / 12));
+            }
+            return getBucketBaseBalance(bucket) + getBucketMonthlyValue(bucket) * Math.max(1, parseInt(bucket.years) || 1);
+        }
+
+        function getSavingsBalanceAtYear(bucket, yearsAhead) {
+            const annualRate = getWeightedRate(bucket) / 100;
+            const monthlyRate = annualRate / 12;
+            const monthlyDeposit = parseFloat(bucket.amount) || 0;
+            let balance = parseFloat(bucket.startAmount) || 0;
+            for (let month = 0; month < yearsAhead * 12; month++) {
+                balance = balance * (1 + monthlyRate) + monthlyDeposit;
+            }
+            return balance;
+        }
+
+        function getRepaymentStartingBalance(bucket) {
+            const flow = state.flow.find(item => item.id === bucket.linkedFlowId);
+            return bucket.startAmount > 0 ? bucket.startAmount : (flow ? getLoanPrincipalFromFlow(flow) : 0);
+        }
+
+        function getRepaymentPayoffMonths(bucket) {
+            const flow = state.flow.find(item => item.id === bucket.linkedFlowId);
+            if (!flow) return 0;
+
+            const annualRate = parseFloat(flow.interest) || 0;
+            const monthlyRate = annualRate / 100 / 12;
+            const monthlyPayment = Math.max(0, (parseFloat(flow.amount) || 0) + (parseFloat(bucket.extraPayment) || 0));
+            let balance = getRepaymentStartingBalance(bucket);
+            let months = 0;
+
+            if (balance <= 0) return 0;
+            if (monthlyPayment <= 0 && monthlyRate <= 0) return 600;
+
+            while (balance > 0 && months < 600) {
+                balance = balance * (1 + monthlyRate) - monthlyPayment;
+                months += 1;
+                if (balance <= 0) break;
+            }
+
+            return months;
+        }
+
+        function getRepaymentBalanceAtYear(bucket, yearsAhead) {
+            const flow = state.flow.find(item => item.id === bucket.linkedFlowId);
+            if (!flow) return 0;
+
+            const annualRate = parseFloat(flow.interest) || 0;
+            const monthlyRate = annualRate / 100 / 12;
+            const monthlyPayment = Math.max(0, (parseFloat(flow.amount) || 0) + (parseFloat(bucket.extraPayment) || 0));
+            let balance = getRepaymentStartingBalance(bucket);
+
+            for (let month = 0; month < yearsAhead * 12 && balance > 0; month++) {
+                balance = balance * (1 + monthlyRate) - monthlyPayment;
+            }
+
+            return Math.max(0, balance);
+        }
+
+        function getBucketProjectionYears(bucket) {
+            if (bucket.mode === 'repayment') {
+                return Math.max(1, Math.ceil(getRepaymentPayoffMonths(bucket) / 12));
+            }
+            return Math.max(1, parseInt(bucket.years) || 1);
+        }
+
+        function getExpenseProjectionYears() {
+            let maxYears = 10;
+            state.flow.filter(item => item.type === 'expense' && item.endDate).forEach(item => {
+                maxYears = Math.max(maxYears, Math.ceil(getMonthsUntilDate(item.endDate) / 12));
+            });
+            state.buckets.filter(bucket => bucket.mode === 'repayment').forEach(bucket => {
+                maxYears = Math.max(maxYears, Math.ceil(getRepaymentPayoffMonths(bucket) / 12));
+            });
+            return Math.min(maxYears, 25);
+        }
+
+        function getExpenseProjectionPoint(yearsAhead) {
+            const futureDate = addMonths(new Date(), yearsAhead * 12);
+            const permanentExpenses = state.flow
+                .filter(item => item.type === 'expense' && !item.endDate)
+                .reduce((acc, curr) => acc + curr.amount, 0);
+
+            const activeTimedExpenses = state.flow.filter(item => item.type === 'expense' && item.endDate && new Date(`${item.endDate}T00:00:00`) >= futureDate);
+            const shortTimedExpenses = activeTimedExpenses.filter(item => getMonthsUntilDate(item.endDate) <= 12).reduce((acc, curr) => acc + curr.amount, 0);
+            const longTimedExpenses = activeTimedExpenses.filter(item => getMonthsUntilDate(item.endDate) > 12).reduce((acc, curr) => acc + curr.amount, 0);
+
+            return {
+                current: permanentExpenses + shortTimedExpenses + longTimedExpenses,
+                afterShort: permanentExpenses + longTimedExpenses,
+                permanent: permanentExpenses
+            };
+        }
+
+        function renderExpenseForecastChart() {
+            const years = getExpenseProjectionYears();
+            const labels = Array.from({ length: years + 1 }, (_, index) => `År ${index}`);
+            const currentSeries = [];
+            const afterShortSeries = [];
+            const permanentSeries = [];
+
+            for (let year = 0; year <= years; year++) {
+                const point = getExpenseProjectionPoint(year);
+                currentSeries.push(point.current);
+                afterShortSeries.push(point.afterShort);
+                permanentSeries.push(point.permanent);
+            }
+
+            if (expenseForecastChart) expenseForecastChart.destroy();
+            expenseForecastChart = new Chart(document.getElementById('expenseForecastChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Nuvarande utgifter',
+                            data: currentSeries,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                            tension: 0.25,
+                            pointRadius: 3,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Efter korta avbetalningar',
+                            data: afterShortSeries,
+                            borderColor: '#38bdf8',
+                            borderDash: [8, 6],
+                            backgroundColor: 'transparent',
+                            tension: 0.25,
+                            pointRadius: 3,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Permanenta utgifter',
+                            data: permanentSeries,
+                            borderColor: '#94a3b8',
+                            borderDash: [6, 6],
+                            backgroundColor: 'transparent',
+                            tension: 0.25,
+                            pointRadius: 3,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { color: '#cbd5e1' } },
+                        tooltip: {
+                            callbacks: {
+                                label(context) {
+                                    return `${context.dataset.label}: ${Math.round(context.parsed.y).toLocaleString('sv-SE')} kr/mån`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148, 163, 184, 0.12)' } },
+                        y: {
+                            ticks: { color: '#94a3b8', callback: value => `${Number(value).toLocaleString('sv-SE')} kr` },
+                            grid: { color: 'rgba(148, 163, 184, 0.12)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function isExpenseActive(endDateStr) {
+            if (!endDateStr) return true;
+            return new Date(endDateStr) >= new Date().setHours(0,0,0,0);
+        }
+
+        function getSectorsExposure(bucketOrTotal, isTotal = false) {
+            let distribution = {};
+            // Filtrera bort 'Mix' från bas-sektorerna i pajdiagrammet
+            const coreSectors = MASTER_SECTORS.filter(s => s !== 'Mix');
+            coreSectors.forEach(s => distribution[s] = 0);
+
+            const bucketsToProcess = isTotal ? state.buckets : [bucketOrTotal];
+
+            bucketsToProcess.forEach(b => {
+                const bWeightInTotal = isTotal ? b.amount : 1; 
+                b.allocations.forEach(alloc => {
+                    const asset = state.assets.find(a => a.id === alloc.assetId);
+                    if (!asset) return;
+
+                    const effectiveValue = alloc.weight * bWeightInTotal;
+
+                    if (asset.sector === 'Mix') {
+                        // Om Mix, splitta jämnt på de konkreta branscherna
+                        const splitValue = effectiveValue / coreSectors.length;
+                        coreSectors.forEach(s => distribution[s] += splitValue);
+                    } else {
+                        if (distribution[asset.sector] !== undefined) {
+                            distribution[asset.sector] += effectiveValue;
+                        } else {
+                            distribution[asset.sector] = effectiveValue;
+                        }
+                    }
+                });
+            });
+
+            let totalSum = Object.values(distribution).reduce((a, b) => a + b, 0);
+            if (totalSum === 0) return {};
+            Object.keys(distribution).forEach(k => {
+                distribution[k] = parseFloat(((distribution[k] / totalSum) * 100).toFixed(1));
+            });
+            return distribution;
+        }
+
+        function updateApp() {
+            const activeFlow = state.flow.filter(item => item.type === 'income' || isExpenseActive(item.endDate));
+            const totalIncome = activeFlow.filter(i => i.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
+            const totalExpenses = activeFlow.filter(i => i.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
+            const totalSavings = state.buckets.filter(bucket => bucket.mode !== 'repayment').reduce((acc, curr) => acc + (parseFloat(curr.startAmount) || 0) + (parseFloat(curr.amount) || 0), 0);
+            const leftover = totalIncome - totalExpenses - totalSavings;
+
+            document.getElementById('total-income-display').innerText = totalIncome.toLocaleString('sv-SE') + ' kr';
+            document.getElementById('total-expenses-display').innerText = totalExpenses.toLocaleString('sv-SE') + ' kr';
+            document.getElementById('total-savings-display').innerText = totalSavings.toLocaleString('sv-SE') + ' kr';
+            document.getElementById('leftover-display').innerText = leftover.toLocaleString('sv-SE') + ' kr';
+
+            renderMasterAssetRegistry();
+            refreshRepaymentFlowOptions();
+            syncBucketFormMode();
+
+            const flowList = document.getElementById('flow-list');
+            flowList.innerHTML = '';
+            state.flow.forEach(item => {
+                const active = item.type === 'income' || isExpenseActive(item.endDate);
+                const endDateLabel = item.endDate ? `Slutar ${formatFlowEndDate(item.endDate)}` : '';
+                const interestLabel = item.endDate ? `Ränta ${parseFloat(item.interest || 0).toLocaleString('sv-SE')}%` : '';
+                flowList.innerHTML += `
+                    <li class="py-2 text-xs border-b border-slate-900 ${!active ? 'opacity-20 line-through' : ''}">
+                        <div class="flex justify-between items-start gap-3">
+                            <div class="min-w-0">
+                                <span class="font-semibold ${item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}">${item.name}</span>
+                                ${endDateLabel ? `<div class="text-[10px] text-slate-500 mt-0.5">${endDateLabel}${interestLabel ? ` · ${interestLabel}` : ''}</div>` : ''}
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span class="font-bold">${item.amount.toLocaleString('sv-SE')} kr</span>
+                                <button onclick="deleteFlow('${item.id}')" title="Radera" aria-label="Radera" class="text-rose-400 hover:text-rose-300 bg-slate-900 border border-slate-800 rounded-md px-2 py-1 cursor-pointer">🗑</button>
+                                <button onclick="editFlow('${item.id}')" title="Ändra" aria-label="Ändra" class="text-blue-400 hover:text-blue-300 bg-slate-900 border border-slate-800 rounded-md px-2 py-1 cursor-pointer">✎</button>
+                            </div>
+                        </div>
+                    </li>`;
+            });
+
+            renderBucketsStructure();
+            renderPrognosisLayout();
+
+            updateCharts(totalIncome, totalExpenses, getSortedBuckets());
+        }
+
+        function renderMasterAssetRegistry() {
+            const searchVal = document.getElementById('asset-search').value.toLowerCase();
+            const sectorFilter = document.getElementById('asset-filter-sector').value;
+            const grid = document.getElementById('asset-master-grid');
+            grid.innerHTML = '';
+
+            state.assets.filter(a => {
+                return a.name.toLowerCase().includes(searchVal) && (sectorFilter === 'all' || a.sector === sectorFilter);
+            }).forEach(asset => {
+                grid.innerHTML += `
+                    <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col justify-between space-y-2 text-xs">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-slate-200">${asset.name}</h4>
+                                <span class="text-[9px] text-slate-400 font-medium bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">${asset.category} | ${asset.sector}</span>
+                            </div>
+                            <span class="text-emerald-400 font-bold text-sm">${asset.rate}%</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-1 border-t border-slate-900/60">
+                            <button onclick="openConnectModal('${asset.id}')" class="text-[10px] font-bold text-emerald-400 hover:bg-emerald-950/20 px-2 py-0.5 rounded border border-emerald-900/40 cursor-pointer">➕ Lägg till i hink</button>
+                            <div class="flex gap-2">
+                                <button onclick="deleteAsset('${asset.id}')" title="Radera" aria-label="Radera" class="text-[10px] text-rose-400 hover:text-rose-300 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded cursor-pointer">🗑</button>
+                                <button onclick="editAsset('${asset.id}')" title="Ändra" aria-label="Ändra" class="text-[10px] text-blue-400 hover:text-blue-300 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded cursor-pointer">✎</button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function renderBucketsStructure() {
+            const container = document.getElementById('buckets-container');
+            container.innerHTML = '';
+            const totalContribution = state.buckets.reduce((acc, bucket) => acc + getBucketContributionValue(bucket), 0) || 1;
+
+            getSortedBuckets().forEach(bucket => {
+                const weightedRate = getWeightedRate(bucket);
+                const isExpanded = !!state.expandedBuckets[bucket.id];
+                const linkedFlow = state.flow.find(flow => flow.id === bucket.linkedFlowId);
+                const bucketShare = ((getBucketContributionValue(bucket) / totalContribution) * 100).toFixed(1);
+                const modeLabel = bucket.mode === 'repayment' ? 'Avbetalning' : 'Sparande';
+                const rateLabel = bucket.mode === 'repayment'
+                    ? `${parseFloat(linkedFlow?.interest || 0).toLocaleString('sv-SE')}% ränta`
+                    : `${weightedRate}% snitt`;
+                const durationLabel = bucket.mode === 'repayment' ? `${getBucketProjectionYears(bucket)} År` : `${bucket.years} År`;
+                const valueLabel = bucket.mode === 'repayment'
+                    ? `${getBucketMonthlyValue(bucket).toLocaleString('sv-SE')} kr extra/mån`
+                    : `${bucket.amount.toLocaleString('sv-SE')} kr/mån`;
+                
+                let div = document.createElement('div');
+                div.className = 'bg-slate-950 border border-slate-800 rounded-xl overflow-hidden';
+
+                let html = `
+                    <div class="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2 cursor-pointer hover:bg-slate-900/40" onclick="toggleBucketExpand('${bucket.id}')">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-500">${isExpanded ? '▼' : '▶'}</span>
+                            <h4 class="font-bold text-sm text-slate-200">${bucket.name}</h4>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-900 border border-slate-800 text-slate-300">${modeLabel}</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-900 border border-slate-800 text-purple-300">${durationLabel}</span>
+                            <span class="text-xs text-emerald-400 font-bold ml-2">${rateLabel}</span>
+                            <span class="text-[10px] text-slate-400">${bucketShare}% av totalen</span>
+                        </div>
+                        <div class="flex items-center space-x-2" onclick="event.stopPropagation();">
+                            <span class="font-black text-purple-300 text-sm mr-2">${valueLabel}</span>
+                            <button onclick="deleteBucket('${bucket.id}')" title="Radera" aria-label="Radera" class="text-rose-400 hover:text-rose-300 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded cursor-pointer">🗑</button>
+                            <button onclick="editBucket('${bucket.id}')" title="Ändra" aria-label="Ändra" class="text-purple-400 hover:text-purple-300 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded cursor-pointer">✎</button>
+                        </div>
+                    </div>`;
+
+                if (isExpanded) {
+                    html += `<div class="bg-slate-900/40 p-4 border-t border-slate-900 text-xs space-y-2.5">`;
+                    if (bucket.mode === 'repayment') {
+                        const linkedFlow = state.flow.find(flow => flow.id === bucket.linkedFlowId);
+                        html += `<div class="text-[10px] text-slate-400 bg-slate-950 border border-slate-900 rounded p-2 mb-2">Avbetalning mot ${linkedFlow ? linkedFlow.name : 'saknad tidsbestämd utgift'} · startsaldo ${getBucketBaseBalance(bucket).toLocaleString('sv-SE')} kr · extra amortering ${getBucketMonthlyValue(bucket).toLocaleString('sv-SE')} kr/mån</div>`;
+                    } else if (bucket.startAmount > 0) {
+                        html += `<div class="text-[10px] text-slate-400 bg-slate-950 border border-slate-900 rounded p-2 mb-2">Startvärde: ${bucket.startAmount.toLocaleString('sv-SE')} kr</div>`;
+                    }
+                    bucket.allocations.forEach((alloc, idx) => {
+                        const asset = state.assets.find(a => a.id === alloc.assetId);
+                        if (asset) {
+                            html += `
+                                <div class="flex justify-between items-center bg-slate-950 border border-slate-900 p-2 rounded">
+                                    <span><b>${asset.name}</b> <span class="text-[10px] text-slate-500">(${asset.category} | ${asset.sector})</span></span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-slate-400">Andel: <input type="number" value="${alloc.weight}" onchange="changeAllocWeight('${bucket.id}', ${idx}, this.value)" class="w-12 bg-slate-900 text-purple-400 font-bold text-center border border-slate-700 rounded p-0.5"> %</span>
+                                        <button onclick="removeAssetFromBucket('${bucket.id}', ${idx})" title="Ta bort" aria-label="Ta bort" class="text-rose-400 hover:text-rose-300 bg-slate-900 border border-slate-800 rounded px-2 py-0.5 text-sm cursor-pointer">×</button>
+                                    </div>
+                                </div>`;
+                        }
+                    });
+
+                    const currentSearch = state.bucketAssetSearches[bucket.id] || '';
+                    const searchFiltered = state.assets.filter(a => a.name.toLowerCase().includes(currentSearch.toLowerCase()) && !bucket.allocations.some(alloc => alloc.assetId === a.id));
+
+                    html += `
+                        <div class="pt-2 border-t border-slate-900/60 flex flex-col sm:flex-row gap-2 justify-between items-center">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">Sök & addera sparform:</span>
+                            <input type="text" value="${currentSearch}" oninput="searchAssetInBucket('${bucket.id}', this.value)" placeholder="Sök i bibliotek..." class="bg-slate-950 border border-slate-800 rounded p-1 text-[11px] focus:outline-none w-full sm:w-44">
+                        </div>`;
+
+                    if (currentSearch && searchFiltered.length > 0) {
+                        html += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-1 bg-slate-950 p-2 rounded border border-slate-900 max-h-24 overflow-y-auto">`;
+                        searchFiltered.forEach(asset => {
+                            html += `<button onclick="addAssetToBucket('${bucket.id}', '${asset.id}')" class="text-left p-1 hover:bg-slate-900 text-slate-300 flex justify-between items-center text-[11px] cursor-pointer"><span>➕ ${asset.name}</span><b class="text-emerald-400">${asset.rate}%</b></button>`;
+                        });
+                        html += `</div>`;
+                    } else if (currentSearch) {
+                        html += `<div class="text-[10px] text-slate-500 flex justify-between p-2 bg-slate-950 rounded border border-slate-900"><span>Hittade inget matchande.</span><button onclick="quickCreateAsset('${bucket.id}', '${currentSearch}')" class="text-emerald-400 hover:underline font-bold cursor-pointer">Snabbskapa sparform</button></div>`;
+                    }
+                    html += `</div>`;
+                }
+
+                div.innerHTML = html;
+                container.appendChild(div);
+            });
+        }
+
+        function getTimelineYears(targetYears) {
+            let columns = [];
+            if (targetYears <= 10) {
+                for (let i = 1; i <= targetYears; i++) columns.push(i);
+            } else {
+                columns = [1, 3, 5, 10];
+                let current = 15;
+                while (current < targetYears) {
+                    columns.push(current);
+                    current += 5;
+                }
+                if (!columns.includes(targetYears)) columns.push(targetYears);
+            }
+            return columns;
+        }
+
+        function renderPrognosisLayout() {
+            const container = document.getElementById('projection-tables-container');
+            container.innerHTML = '';
+            
+            getSortedBuckets().forEach(bucket => {
+                const isExpanded = !!state.expandedProjections[bucket.id];
+                const isRepayment = bucket.mode === 'repayment';
+                const cols = getTimelineYears(getBucketProjectionYears(bucket));
+                const rate = getWeightedRate(bucket);
+                const linkedFlow = state.flow.find(flow => flow.id === bucket.linkedFlowId);
+
+                let div = document.createElement('div');
+                div.className = 'border border-slate-800 rounded-xl overflow-hidden bg-slate-950 shadow-sm';
+
+                let tableHtml = `
+                    <div class="overflow-x-auto cursor-pointer hover:bg-slate-900/10" onclick="toggleProjectionExpand('${bucket.id}')">
+                        <table class="w-full text-left text-xs sm:text-sm text-slate-300">
+                            <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] tracking-wider">
+                                <tr>
+                                    <th class="p-4 w-48">Målhink</th>
+                                    <th class="p-4 w-20">${isRepayment ? 'Skuld' : 'Avkastning'}</th>
+                                    ${cols.map(y => `<th class="p-4">År ${y}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="${isExpanded ? 'bg-slate-900/20' : ''}">
+                                    <td class="p-4 font-bold text-slate-200 flex flex-col gap-1"><span class="flex items-center gap-2"><span>${isExpanded ? '▼' : '▶'}</span> ${bucket.name}</span><span class="text-[10px] text-slate-500">${isRepayment ? (linkedFlow ? `Kopplad till ${linkedFlow.name}` : 'Välj en tidsbestämd utgift') : `${bucket.startAmount > 0 ? `Start ${bucket.startAmount.toLocaleString('sv-SE')} kr` : 'Start 0 kr'}`}</span></td>
+                                    <td class="p-4 ${isRepayment ? 'text-rose-300 font-bold' : 'text-emerald-400 font-bold'}">${isRepayment ? `${parseFloat(linkedFlow?.interest || 0).toLocaleString('sv-SE')}%` : `${rate}%`}</td>
+                                    ${cols.map(y => {
+                                        const value = isRepayment ? getRepaymentBalanceAtYear(bucket, y) : getSavingsBalanceAtYear(bucket, y);
+                                        return `<td class="p-4 font-semibold ${isRepayment ? 'text-rose-300' : 'text-slate-300'}">${Math.round(value).toLocaleString('sv-SE')} kr</td>`;
+                                    }).join('')}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>`;
+
+                if (isExpanded) {
+                    const repaymentInfo = linkedFlow
+                        ? `Extra amortering: ${getBucketMonthlyValue(bucket).toLocaleString('sv-SE')} kr/mån`
+                        : 'Välj en tidsbestämd utgift för att kunna räkna avbetalningen.';
+                    const expandedSideContent = isRepayment
+                        ? `<div class="w-full text-[10px] text-slate-500 bg-slate-950 border border-slate-900 rounded p-3">${repaymentInfo}</div>`
+                        : `<canvas id="sector-chart-${bucket.id}"></canvas>`;
+
+                    tableHtml += `
+                        <div class="p-4 bg-slate-900/30 border-t border-slate-900 flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div class="text-xs text-slate-400 space-y-1">
+                                <h5 class="font-bold text-slate-300">${isRepayment ? 'Avbetalningsplan' : 'Sektorviktning (Exklusive Mix):'}</h5>
+                                <p>${isRepayment ? `Skulden visas år för år med nuvarande ränta och extra amortering tills den når noll.` : `Fonder märkta som 'Mix' fördelas automatiskt jämnt över resterande branscher.`}</p>
+                            </div>
+                            <div class="w-full max-w-[260px] h-[170px] flex justify-center">
+                                ${expandedSideContent}
+                            </div>
+                        </div>`;
+                }
+
+                div.innerHTML = tableHtml;
+                container.appendChild(div);
+                if (isExpanded && !isRepayment) setTimeout(() => renderSectorChart(bucket.id, bucket, false), 10);
+            });
+
+            // TOTAL-RAD
+            const totalExpanded = !!state.expandedProjections['total'];
+            const savingsBuckets = state.buckets.filter(bucket => bucket.mode !== 'repayment');
+            const maxYearsInApp = savingsBuckets.length > 0 ? Math.max(...savingsBuckets.map(b => b.years)) : 10;
+            const totalCols = getTimelineYears(maxYearsInApp);
+
+            let totalDiv = document.createElement('div');
+            totalDiv.className = 'border-2 border-indigo-900/50 rounded-xl overflow-hidden bg-slate-950 mt-4';
+            
+            let totalHtml = `
+                <div class="overflow-x-auto cursor-pointer bg-slate-900/40 hover:bg-slate-900/60" onclick="toggleProjectionExpand('total')">
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-300 font-bold">
+                        <thead class="bg-slate-950 text-indigo-400 uppercase text-[10px] tracking-wider">
+                            <tr>
+                                <th class="p-4 w-48">TOTAL ACCUMULERING</th>
+                                <th class="p-4 w-16"></th>
+                                ${totalCols.map(y => `<th class="p-4">År ${y}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="p-4 text-indigo-300 flex items-center gap-2"><span>${totalExpanded ? '▼' : '▶'}</span> HELA DIN FÖRMÖGENHET</td>
+                                <td class="p-4"></td>
+                                ${totalCols.map(y => {
+                                    let sum = 0;
+                                    savingsBuckets.forEach(b => { sum += getSavingsBalanceAtYear(b, y); });
+                                    return `<td class="p-4 text-emerald-400">${Math.round(sum).toLocaleString('sv-SE')} kr</td>`;
+                                }).join('')}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>`;
+
+            if (totalExpanded) {
+                totalHtml += `
+                    <div class="p-4 bg-slate-900/60 border-t border-slate-900 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div class="text-xs text-slate-400">
+                            <h5 class="font-bold text-indigo-300">Total Sektorallokering för hela ekonomin:</h5>
+                        </div>
+                        <div class="w-full max-w-[260px] h-[170px] flex justify-center"><canvas id="sector-chart-total"></canvas></div>
+                    </div>`;
+            }
+
+            totalDiv.innerHTML = totalHtml;
+            container.appendChild(totalDiv);
+            if (totalExpanded) setTimeout(() => renderSectorChart('total', null, true), 10);
+        }
+
+        function renderSectorChart(canvasId, bucket, isTotal) {
+            const exposure = getSectorsExposure(bucket, isTotal);
+            const labels = Object.keys(exposure).filter(k => exposure[k] > 0); // Visa bara sektorer med innehav
+            const data = labels.map(k => exposure[k]);
+
+            if (sectorCharts[canvasId]) sectorCharts[canvasId].destroy();
+
+            const canvas = document.getElementById(`sector-chart-${canvasId}`);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            sectorCharts[canvasId] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels.map((l, i) => `${l} (${data[i]}%)`),
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#38bdf8', '#818cf8', '#34d399', '#f472b6', '#fbbf24', '#a78bfa', '#2dd4bf', '#f87171', '#fb7185'],
+                        borderWidth: 1, borderColor: '#020617'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 9 } } } }
+                }
+            });
+        }
+
+        function toggleProjectionExpand(id) {
+            state.expandedProjections[id] = !state.expandedProjections[id];
+            localStorage.setItem('lundahl_dashboard_v5_state', JSON.stringify(state));
+            updateApp();
+        }
+
+        function toggleBucketExpand(id) { state.expandedBuckets[id] = !state.expandedBuckets[id]; localStorage.setItem('lundahl_dashboard_v5_state', JSON.stringify(state)); updateApp(); }
+        function searchAssetInBucket(bId, val) { state.bucketAssetSearches[bId] = val; updateApp(); }
+        function addAssetToBucket(bId, aId) {
+            const b = state.buckets.find(x => x.id === bId);
+            if (b && !b.allocations.some(a => a.assetId === aId)) { b.allocations.push({ assetId: aId, weight: 0 }); state.bucketAssetSearches[bId] = ''; saveState(); }
+        }
+        function quickCreateAsset(bId, name) {
+            const aId = "a_" + Date.now();
+            state.assets.push({ id: aId, name, category: 'Fond', rate: 8.0, sector: 'Tech' });
+            addAssetToBucket(bId, aId);
+        }
+        function removeAssetFromBucket(bId, index) {
+            const b = state.buckets.find(x => x.id === bId);
+            if (b) { b.allocations.splice(index, 1); saveState(); }
+        }
+        function changeAllocWeight(bId, index, val) {
+            const b = state.buckets.find(x => x.id === bId);
+            if (b) { b.allocations[index].weight = parseFloat(val) || 0; saveState(); }
+        }
+
+        // ASSET CRUD
+        document.getElementById('asset-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('asset-id').value || "a_" + Date.now();
+            const name = document.getElementById('asset-name').value;
+            const category = document.getElementById('asset-category').value;
+            const rate = parseFloat(document.getElementById('asset-rate').value);
+            const sector = document.getElementById('asset-sector').value;
+
+            const idx = state.assets.findIndex(a => a.id === id);
+            if (idx > -1) state.assets[idx] = { id, name, category, rate, sector };
+            else state.assets.push({ id, name, category, rate, sector });
+            cancelAssetEdit(); saveState();
+        });
+        function editAsset(id) {
+            const asset = state.assets.find(a => a.id === id);
+            document.getElementById('asset-id').value = asset.id;
+            document.getElementById('asset-name').value = asset.name;
+            document.getElementById('asset-category').value = asset.category || 'Fond';
+            document.getElementById('asset-rate').value = asset.rate;
+            document.getElementById('asset-sector').value = asset.sector;
+            document.getElementById('asset-cancel-btn').classList.remove('hidden');
+        }
+        function cancelAssetEdit() { document.getElementById('asset-form').reset(); document.getElementById('asset-id').value = ''; document.getElementById('asset-cancel-btn').classList.add('hidden'); }
+        function deleteAsset(id) {
+            state.assets = state.assets.filter(a => a.id !== id);
+            state.buckets.forEach(b => b.allocations = b.allocations.filter(al => al.assetId !== id));
+            saveState();
+        }
+
+        // FLOW CRUD
+        document.getElementById('flow-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('flow-id').value || Date.now().toString();
+            const type = document.getElementById('flow-type').value;
+            const name = document.getElementById('flow-name').value;
+            const amount = parseFloat(document.getElementById('flow-amount').value);
+            const endDate = document.getElementById('flow-enddate').value || null;
+            const interest = parseFloat(document.getElementById('flow-interest').value) || 0;
+            const idx = state.flow.findIndex(i => i.id === id);
+            if(idx > -1) state.flow[idx] = { id, type, name, amount, endDate, interest };
+            else state.flow.push({ id, type, name, amount, endDate, interest });
+            cancelFlowEdit(); saveState();
+        });
+        function editFlow(id) {
+            const item = state.flow.find(i => i.id === id);
+            document.getElementById('flow-id').value = item.id;
+            document.getElementById('flow-type').value = item.type;
+            document.getElementById('flow-name').value = item.name;
+            document.getElementById('flow-amount').value = item.amount;
+            document.getElementById('flow-enddate').value = item.endDate || '';
+            document.getElementById('flow-interest').value = item.interest || 0;
+            document.getElementById('flow-cancel-btn').classList.remove('hidden');
+        }
+        function cancelFlowEdit() { document.getElementById('flow-form').reset(); document.getElementById('flow-interest').value = 0; document.getElementById('flow-id').value = ''; document.getElementById('flow-cancel-btn').classList.add('hidden'); }
+        function deleteFlow(id) { state.flow = state.flow.filter(i => i.id !== id); state.buckets.forEach(bucket => { if (bucket.linkedFlowId === id) bucket.linkedFlowId = ''; }); saveState(); }
+
+        // BUCKET CRUD
+        document.getElementById('bucket-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('bucket-id').value || Date.now().toString();
+            const mode = document.getElementById('bucket-mode').value;
+            const name = document.getElementById('bucket-name').value;
+            const startAmount = parseFloat(document.getElementById('bucket-start-amount').value) || 0;
+            const horizon = document.getElementById('bucket-horizon').value;
+            const years = parseInt(document.getElementById('bucket-years').value) || 5;
+            const amount = parseFloat(document.getElementById('bucket-amount').value);
+            const linkedFlowId = document.getElementById('bucket-repayment-flow').value || '';
+            const extraPayment = parseFloat(document.getElementById('bucket-extra-payment').value) || 0;
+
+            if (mode === 'repayment' && !linkedFlowId) {
+                alert('Välj en tidsbestämd utgift att avbetala.');
+                return;
+            }
+
+            const idx = state.buckets.findIndex(b => b.id === id);
+            if(idx > -1) {
+                state.buckets[idx].name = name;
+                state.buckets[idx].mode = mode;
+                state.buckets[idx].startAmount = startAmount;
+                state.buckets[idx].horizon = horizon;
+                state.buckets[idx].years = years;
+                state.buckets[idx].amount = amount;
+                state.buckets[idx].linkedFlowId = linkedFlowId;
+                state.buckets[idx].extraPayment = extraPayment;
+            } else {
+                state.buckets.push({ id, name, mode, startAmount, horizon, years, amount, linkedFlowId, extraPayment, allocations: [] });
+            }
+            cancelBucketEdit(); saveState();
+        });
+        function editBucket(id) {
+            const b = state.buckets.find(x => x.id === id);
+            document.getElementById('bucket-id').value = b.id;
+            document.getElementById('bucket-mode').value = b.mode || 'savings';
+            document.getElementById('bucket-name').value = b.name;
+            document.getElementById('bucket-start-amount').value = b.startAmount || 0;
+            document.getElementById('bucket-horizon').value = b.horizon;
+            document.getElementById('bucket-years').value = b.years;
+            document.getElementById('bucket-amount').value = b.amount;
+            document.getElementById('bucket-repayment-flow').value = b.linkedFlowId || '';
+            document.getElementById('bucket-extra-payment').value = b.extraPayment || 0;
+            document.getElementById('bucket-cancel-btn').classList.remove('hidden');
+            syncBucketFormMode();
+        }
+        function cancelBucketEdit() { document.getElementById('bucket-form').reset(); document.getElementById('bucket-mode').value = 'savings'; document.getElementById('bucket-start-amount').value = 0; document.getElementById('bucket-extra-payment').value = 0; document.getElementById('bucket-id').value = ''; document.getElementById('bucket-cancel-btn').classList.add('hidden'); syncBucketFormMode(); }
+        function deleteBucket(id) { state.buckets = state.buckets.filter(b => b.id !== id); saveState(); }
+
+        function openConnectModal(assetId) {
+            document.getElementById('connect-asset-id').value = assetId;
+            const select = document.getElementById('connect-bucket-select');
+            select.innerHTML = '';
+            state.buckets.forEach(b => select.innerHTML += `<option value="${b.id}">${b.name}</option>`);
+            document.getElementById('connect-modal').classList.replace('hidden', 'flex');
+        }
+        function closeConnectModal() { document.getElementById('connect-modal').classList.replace('flex', 'hidden'); }
+        function submitConnectAsset() {
+            const aId = document.getElementById('connect-asset-id').value;
+            const bId = document.getElementById('connect-bucket-select').value;
+            const weight = parseFloat(document.getElementById('connect-weight').value) || 0;
+            const b = state.buckets.find(x => x.id === bId);
+            if (b && !b.allocations.some(a => a.assetId === aId)) { b.allocations.push({ assetId: aId, weight }); closeConnectModal(); saveState(); }
+            else { alert("Sparformen finns redan i vald hink!"); }
+        }
+
+        function updateCharts(income, expenses, buckets) {
+            const barCanvas = document.getElementById('barChart');
+            if (!barCanvas) return;
+            const barCtx = barCanvas.getContext('2d');
+            if (!barCtx) return;
+
+            if (barChart) barChart.destroy();
+            barChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Inkomst', 'Utgift'],
+                    datasets: [{ data: [income, expenses], backgroundColor: ['rgba(52, 211, 153, 0.6)', 'rgba(244, 63, 94, 0.6)'], borderColor: ['#10b981', '#f43f5e'], borderWidth: 1, borderRadius: 6 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            if (pieChart) pieChart.destroy();
+            if(buckets.length === 0) {
+                renderExpenseForecastChart();
+                return;
+            }
+
+            const pieCanvas = document.getElementById('pieChart');
+            if (!pieCanvas) {
+                renderExpenseForecastChart();
+                return;
+            }
+            const pieCtx = pieCanvas.getContext('2d');
+            if (!pieCtx) {
+                renderExpenseForecastChart();
+                return;
+            }
+
+            const coldTones = ['#0284c7', '#0369a1', '#0e7490', '#3b82f6', '#1d4ed8', '#06b6d4'];
+            const warmTones = ['#ea580c', '#d97706', '#b45309', '#db2777', '#be185d', '#e11d48'];
+            let cIdx = 0, wIdx = 0;
+            const bucketValues = buckets.map(b => getBucketContributionValue(b));
+            const totalBucketValue = bucketValues.reduce((acc, curr) => acc + curr, 0) || 1;
+            const chartColors = buckets.map(b => b.mode === 'repayment' ? '#f97316' : (b.horizon === 'long' ? coldTones[cIdx++ % coldTones.length] : warmTones[wIdx++ % warmTones.length]));
+
+            pieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: { labels: buckets.map((b, index) => `${b.name} (${((bucketValues[index] / totalBucketValue) * 100).toFixed(1)}%)`), datasets: [{ data: bucketValues, backgroundColor: chartColors, borderWidth: 1, borderColor: '#020617' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 10 } } } } }
+            });
+
+            renderExpenseForecastChart();
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const dlAnchor = document.createElement('a'); dlAnchor.setAttribute("href", dataStr); dlAnchor.setAttribute("download", "lundahl_dashboard_v5.json");
+            document.body.appendChild(dlAnchor); dlAnchor.click(); dlAnchor.remove();
+        }
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.flow && imported.assets && imported.buckets) { state = imported; saveState(); alert("Synk slutförd!"); }
+                } catch(err) { alert("Fel vid import."); }
+            };
+            reader.readAsText(file);
+        }
+
+        updateApp();
+    </script>
+</div>
+</body>
+</html>
