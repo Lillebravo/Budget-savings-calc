@@ -330,29 +330,24 @@
 
         let state = normalizeState(JSON.parse(localStorage.getItem('lundahl_dashboard_v5_state')) || {
             flow: [
-                { id: "1", type: 'income', name: 'Lön (Netto)', amount: 33000, endDate: null, interest: 0, category: 'Inkomst' },
-                { id: "2", type: 'income', name: 'Frun (Mammaledig)', amount: 4000, endDate: null, interest: 0, category: 'Inkomst' },
-                { id: "3", type: 'expense', name: 'Fasta utgifter (Inkl. Lån/CSN)', amount: 19000, endDate: null, interest: 0, category: 'Boende' },
-                { id: "4", type: 'expense', name: 'Klarna (Dödas i juli)', amount: 9500, endDate: '2026-07-31', interest: 0, category: 'Lån/Avbetalning' },
-                { id: "5", type: 'expense', name: 'Harry Avbetalningar (Klara sept)', amount: 1140, endDate: '2026-09-30', interest: 0, category: 'Lån/Avbetalning' }
+                { id: "1", type: 'income', name: 'Huvudinkomst', amount: 32000, endDate: null, interest: 0, category: 'Inkomst' },
+                { id: "2", type: 'income', name: 'Extra inkomst', amount: 3000, endDate: null, interest: 0, category: 'Inkomst' },
+                { id: "3", type: 'expense', name: 'Boende', amount: 12000, endDate: null, interest: 0, category: 'Boende' },
+                { id: "4", type: 'expense', name: 'Mat', amount: 5000, endDate: null, interest: 0, category: 'Mat' },
+                { id: "5", type: 'expense', name: 'Tillfällig avbetalning', amount: 2500, endDate: '2027-06-30', interest: 5.5, category: 'Avbetalning' }
             ],
             assets: [
-                { id: "a1", name: 'Avanza Global', category: 'Fond', rate: 8.0, sector: 'Mix' },
-                { id: "a2", name: 'Investor B', category: 'Aktie', rate: 12.0, sector: 'Investment' },
-                { id: "a3", name: 'Plus AllaBolag Sverige', category: 'Fond', rate: 9.0, sector: 'Mix' },
-                { id: "a4", name: 'Swedbank Robur Tech', category: 'Fond', rate: 15.0, sector: 'Tech' },
-                { id: "a5", name: 'Sparkonto rörlig', category: 'Sparkonto', rate: 3.5, sector: 'Ränta/Sparkonto' }
+                { id: "a1", name: 'Global Indexfond', category: 'Fond', rate: 8.0, sector: 'Mix' },
+                { id: "a2", name: 'Svensk Aktiefond', category: 'Fond', rate: 7.5, sector: 'Finans' },
+                { id: "a3", name: 'Teknikfond', category: 'Fond', rate: 10.0, sector: 'Tech' },
+                { id: "a4", name: 'Stabil Dividendaktie', category: 'Aktie', rate: 6.5, sector: 'Industri' },
+                { id: "a5", name: 'Sparkonto', category: 'Sparkonto', rate: 3.0, sector: 'Ränta/Sparkonto' }
             ],
             buckets: [
-                { id: "b1", name: 'Pension & Frihetsmaskin', horizon: 'long', years: 39, amount: 1000, allocations: [{ assetId: 'a1', weight: 40 }, { assetId: 'a3', weight: 30 }, { assetId: 'a4', weight: 30 }] },
-                { id: "b2", name: 'Husets Kontantinsats', horizon: 'long', years: 6, amount: 3000, allocations: [{ assetId: 'a1', weight: 50 }, { assetId: 'a2', weight: 50 }] },
-                { id: "b3", name: 'Bil (Restvärde + Akut)', horizon: 'long', years: 4, amount: 2000, allocations: [{ assetId: 'a1', weight: 50 }, { assetId: 'a2', weight: 50 }] },
-                { id: "b4", name: 'Semesterhinken', horizon: 'short', years: 2, amount: 1000, allocations: [{ assetId: 'a1', weight: 70 }, { assetId: 'a3', weight: 30 }] },
-                { id: "b5", name: 'Tatueringshinken', horizon: 'short', years: 3, amount: 1000, allocations: [{ assetId: 'a1', weight: 70 }, { assetId: 'a3', weight: 30 }] },
-                { id: "b6", name: 'Skoj-hink', horizon: 'short', years: 1, amount: 1000, allocations: [{ assetId: 'a5', weight: 100 }] },
-                { id: "b7", name: 'Privat Buffert', horizon: 'short', years: 5, amount: 1800, allocations: [{ assetId: 'a5', weight: 100 }] },
-                { id: "b8", name: 'Presenter & Släkt', horizon: 'short', years: 1, amount: 400, allocations: [{ assetId: 'a5', weight: 100 }] },
-                { id: "b9", name: 'Vardags-Barnhink', horizon: 'short', years: 1, amount: 500, allocations: [{ assetId: 'a5', weight: 100 }] }
+                { id: "b1", name: 'Långsiktigt sparande', horizon: 'long', years: 10, amount: 2500, allocations: [{ assetId: 'a1', weight: 50 }, { assetId: 'a3', weight: 30 }, { assetId: 'a4', weight: 20 }] },
+                { id: "b2", name: 'Kontantinsats', horizon: 'long', years: 5, amount: 2000, allocations: [{ assetId: 'a1', weight: 60 }, { assetId: 'a2', weight: 40 }] },
+                { id: "b3", name: 'Buffert', horizon: 'short', years: 2, amount: 1500, allocations: [{ assetId: 'a5', weight: 100 }] },
+                { id: "b4", name: 'Resor och fritid', horizon: 'short', years: 3, amount: 800, allocations: [{ assetId: 'a5', weight: 60 }, { assetId: 'a1', weight: 40 }] }
             ],
             expandedBuckets: {},
             expandedProjections: {},
