@@ -9,17 +9,17 @@
     <!-- Chart.js för grafer -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen overflow-x-hidden">
     <div id="app-root">
 
     <!-- Header -->
-    <header class="border-b border-slate-800 bg-slate-950 p-6 shadow-xl">
+    <header class="border-b border-slate-800 bg-slate-950 p-4 sm:p-6 shadow-xl">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">LUNDAHL FINANCIAL DASHBOARD V5</h1>
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-wide sm:tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 break-words">LUNDAHL FINANCIAL DASHBOARD V5</h1>
                 <p class="text-xs text-slate-400 mt-1" id="current-date"></p>
             </div>
-            <div class="flex items-center space-x-3">
+            <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2 w-full sm:w-auto">
                 <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-2 rounded-lg font-medium transition cursor-pointer">💾 Exportera JSON</button>
                 <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-2 rounded-lg font-medium transition cursor-pointer">
                     📂 Importera JSON
@@ -29,29 +29,29 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-6 space-y-8">
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-8">
 
         <!-- KPI Översikt -->
         <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
             <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
                 <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Inkomst</h3>
-                <p class="text-3xl font-bold text-emerald-400 mt-2" id="total-income-display">0 kr</p>
+                <p class="text-2xl sm:text-3xl font-bold text-emerald-400 mt-2 break-words" id="total-income-display">0 kr</p>
             </div>
             <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
                 <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Totalt Sparande</h3>
-                <p class="text-3xl font-bold text-indigo-400 mt-2" id="total-savings-display">0 kr</p>
+                <p class="text-2xl sm:text-3xl font-bold text-indigo-400 mt-2 break-words" id="total-savings-display">0 kr</p>
             </div>
             <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
                 <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Extra Avbetalningar</h3>
-                <p class="text-3xl font-bold text-sky-300 mt-2" id="total-extra-repayments-display">0 kr</p>
+                <p class="text-2xl sm:text-3xl font-bold text-sky-300 mt-2 break-words" id="total-extra-repayments-display">0 kr</p>
             </div>
             <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
                 <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Aktiva Utgifter</h3>
-                <p class="text-3xl font-bold text-rose-400 mt-2" id="total-expenses-display">0 kr</p>
+                <p class="text-2xl sm:text-3xl font-bold text-rose-400 mt-2 break-words" id="total-expenses-display">0 kr</p>
             </div>
             <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
                 <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Oallokerat (Vardagsmarginal)</h3>
-                <p class="text-3xl font-bold text-purple-400 mt-2" id="leftover-display">0 kr</p>
+                <p class="text-2xl sm:text-3xl font-bold text-purple-400 mt-2 break-words" id="leftover-display">0 kr</p>
             </div>
         </section>
 
@@ -69,7 +69,7 @@
 
         <section class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-md">
             <h2 class="text-xl font-bold text-amber-400 border-b border-slate-800 pb-2 mb-2">Utgiftsprognos</h2>
-            <p class="text-xs text-slate-400 mb-6">Den streckade linjen visar hur utgifterna faller när tidsbestämda kostnader försvinner. Hover på den nedersta linjen visar bara permanenta utgifter.</p>
+            <p class="text-xs text-slate-400 mb-6">Hel linje = alla aktiva utgifter nu. Blå streckad = när korta tillfälliga utgifter har försvunnit. Grå prickad = bara permanenta utgifter.</p>
             <div class="w-full h-[300px] flex justify-center"><canvas id="expenseForecastChart"></canvas></div>
         </section>
 
@@ -109,7 +109,7 @@
                         <label class="block text-xs font-medium text-slate-400 mb-1">Ranta % (for avbetalningar)</label>
                         <input type="number" step="0.1" id="flow-interest" value="0" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
-                    <div class="md:col-span-2 flex space-x-2">
+                    <div class="md:col-span-2 flex flex-col sm:flex-row gap-2">
                         <button type="submit" id="flow-submit-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg transition text-sm cursor-pointer">Spara</button>
                         <button type="button" id="flow-cancel-btn" onclick="cancelFlowEdit()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-sm transition cursor-pointer">Avbryt</button>
                     </div>
@@ -146,7 +146,7 @@
                             <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Namn</label>
                             <input type="text" id="asset-name" required placeholder="T.ex. Avanza Global" class="w-full bg-slate-950 border border-slate-800 rounded-md p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
                         </div>
-                        <div class="grid grid-cols-3 gap-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <div>
                                 <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Kategori</label>
                                 <select id="asset-category" class="w-full bg-slate-950 border border-slate-800 rounded-md p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
@@ -229,9 +229,9 @@
                             Startvärdet kan användas som nuvarande skuld om du vill räkna från ett exakt saldo istället för att uppskatta det från betalning, ränta och slutdatum.
                         </div>
                     </div>
-                    <div class="md:col-span-2 flex items-end">
+                    <div class="md:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                         <button type="submit" id="bucket-submit-btn" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2 rounded-lg transition text-sm cursor-pointer">Spara</button>
-                        <button type="button" id="bucket-cancel-btn" onclick="cancelBucketEdit()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 ml-2 rounded-lg text-sm transition cursor-pointer">Avbryt</button>
+                        <button type="button" id="bucket-cancel-btn" onclick="cancelBucketEdit()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-sm transition cursor-pointer">Avbryt</button>
                     </div>
                 </form>
 
@@ -607,7 +607,9 @@
             return {
                 current: permanentExpenses + shortTimedExpenses + longTimedExpenses,
                 afterShort: permanentExpenses + longTimedExpenses,
-                permanent: permanentExpenses
+                permanent: permanentExpenses,
+                shortTimed: shortTimedExpenses,
+                longTimed: longTimedExpenses
             };
         }
 
@@ -625,12 +627,16 @@
             const currentSeries = [];
             const afterShortSeries = [];
             const permanentSeries = [];
+            const shortTimedSeries = [];
+            const longTimedSeries = [];
 
             for (let year = 0; year <= years; year++) {
                 const point = getExpenseProjectionPoint(year);
                 currentSeries.push(point.current);
                 afterShortSeries.push(point.afterShort);
                 permanentSeries.push(point.permanent);
+                shortTimedSeries.push(point.shortTimed);
+                longTimedSeries.push(point.longTimed);
             }
 
             if (expenseForecastChart) expenseForecastChart.destroy();
@@ -640,32 +646,35 @@
                     labels,
                     datasets: [
                         {
-                            label: 'Nuvarande utgifter',
+                            label: 'Alla aktiva utgifter',
                             data: currentSeries,
                             borderColor: '#f59e0b',
                             backgroundColor: 'rgba(245, 158, 11, 0.12)',
                             tension: 0.25,
                             pointRadius: 3,
+                            pointStyle: 'circle',
                             borderWidth: 2
                         },
                         {
-                            label: 'Efter korta avbetalningar',
+                            label: 'Efter korta tillfälliga utgifter',
                             data: afterShortSeries,
                             borderColor: '#38bdf8',
                             borderDash: [8, 6],
                             backgroundColor: 'transparent',
                             tension: 0.25,
                             pointRadius: 3,
+                            pointStyle: 'rectRounded',
                             borderWidth: 2
                         },
                         {
-                            label: 'Permanenta utgifter',
+                            label: 'Endast permanenta utgifter',
                             data: permanentSeries,
                             borderColor: '#94a3b8',
-                            borderDash: [6, 6],
+                            borderDash: [2, 6],
                             backgroundColor: 'transparent',
                             tension: 0.25,
                             pointRadius: 3,
+                            pointStyle: 'triangle',
                             borderWidth: 2
                         }
                     ]
@@ -675,11 +684,30 @@
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { position: 'top', labels: { color: '#cbd5e1' } },
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#cbd5e1',
+                                usePointStyle: true,
+                                boxWidth: 10,
+                                boxHeight: 10,
+                                padding: 14
+                            }
+                        },
                         tooltip: {
                             callbacks: {
                                 label(context) {
                                     return `${context.dataset.label}: ${Math.round(context.parsed.y).toLocaleString('sv-SE')} kr/mån`;
+                                },
+                                afterBody(items) {
+                                    const index = items?.[0]?.dataIndex;
+                                    if (index === undefined) return [];
+
+                                    return [
+                                        `Permanenta: ${Math.round(permanentSeries[index]).toLocaleString('sv-SE')} kr/mån`,
+                                        `Korta tillfälliga: ${Math.round(shortTimedSeries[index]).toLocaleString('sv-SE')} kr/mån`,
+                                        `Långa tillfälliga: ${Math.round(longTimedSeries[index]).toLocaleString('sv-SE')} kr/mån`
+                                    ];
                                 }
                             }
                         }
