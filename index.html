@@ -888,16 +888,16 @@
 
                 let html = `
                     <div class="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2 cursor-pointer hover:bg-slate-900/40" onclick="toggleBucketExpand('${bucket.id}')">
-                        <div class="flex items-center space-x-2">
+                        <div class="flex flex-wrap items-center gap-2 min-w-0">
                             <span class="text-xs text-slate-500">${isExpanded ? '▼' : '▶'}</span>
-                            <h4 class="font-bold text-sm text-slate-200">${bucket.name}</h4>
+                            <h4 class="font-bold text-sm text-slate-200 break-words">${bucket.name}</h4>
                             <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-900 border border-slate-800 text-slate-300">${modeLabel}</span>
                             <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-900 border border-slate-800 text-purple-300">${durationLabel}</span>
-                            <span class="text-xs text-emerald-400 font-bold ml-2">${rateLabel}</span>
-                            <span class="text-[10px] text-slate-400">${bucketShare}% av totalen</span>
+                            <span class="text-xs text-emerald-400 font-bold">${rateLabel}</span>
+                            <span class="text-[10px] text-slate-400 whitespace-normal">${bucketShare}% av totalen</span>
                         </div>
-                        <div class="flex items-center space-x-2" onclick="event.stopPropagation();">
-                            <span class="font-black text-purple-300 text-sm mr-2">${valueLabel}</span>
+                        <div class="flex flex-wrap items-center gap-2" onclick="event.stopPropagation();">
+                            <span class="font-black text-purple-300 text-sm">${valueLabel}</span>
                             <button onclick="deleteBucket('${bucket.id}')" title="Radera" aria-label="Radera" class="text-rose-400 hover:text-rose-300 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded cursor-pointer">🗑</button>
                             <button onclick="editBucket('${bucket.id}')" title="Ändra" aria-label="Ändra" class="text-purple-400 hover:text-purple-300 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded cursor-pointer">✎</button>
                         </div>
